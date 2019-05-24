@@ -213,7 +213,6 @@ class ChemStationCSVParser(InstrumentXLSResultsFileParser):
                     self._addRawResult(self._ar_id, values, override=False)
 
 
-
 class chemstationimport(object):
     implements(IInstrumentImportInterface, IInstrumentAutoImportInterface)
     title = "Agilent ChemStation"
