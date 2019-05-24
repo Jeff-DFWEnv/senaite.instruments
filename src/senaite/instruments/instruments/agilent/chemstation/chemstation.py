@@ -181,6 +181,39 @@ class ChemStationParser(InstrumentXLSResultsFileParser):
         return
 
 
+class ChemStationCSVParser(InstrumentXLSResultsFileParser):
+    """ Parser for Agilent Chemstation QUANT.CSV file type
+    """
+    def __init__(self, infile, encoding=None):
+        InstrumentXLSResultsFileParser.__init__(
+            self, infile, worksheet=2, encoding=encoding)
+        self._end_header = False
+        self._ar_id = None
+
+    def _parseCSV(self, csv_file):
+        self._end_header = False
+        row_num = 0
+        for row in csv_file:
+            row_num += 1
+            if row:
+                if "Results" in row[0]:    #Results line ends header and begins resulsts section
+                    self._end_header = True
+                    continue
+                if row_num == 4:           #AR ID is always line 4 of CSV
+                    self._ar_id = row[0]
+                    continue
+                if self._end_header == True:
+                    kw = row[0]           #keyword for analysis service / analyte
+                    resp = row[1]         #instrument response for analyte
+                    ret_time = row[2]     #retention time for analyte
+                    result = row[3]       #instrument result for analyte
+                    values = {kw:
+                                  {'DefaultResult': 'Final Conc', 'Resp': resp, 'Ret': ret_time, 'Final Conc': result}
+                              }
+                    self._addRawResult(self._ar_id, values, override=False)
+
+
+
 class chemstationimport(object):
     implements(IInstrumentImportInterface, IInstrumentAutoImportInterface)
     title = "Agilent ChemStation"
@@ -208,6 +241,8 @@ class chemstationimport(object):
             errors.append(_("No file selected"))
         if fileformat in ('xls', 'xlsx'):
             parser = ChemStationParser(infile, encoding=fileformat)
+        elif fileformat in ('csv'):
+            parser = ChemStationCSVParser(infile, encoding=fileformat)
         else:
             errors.append(t(_("Unrecognized file format ${fileformat}",
                               mapping={"fileformat": fileformat})))

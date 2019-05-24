@@ -1,4 +1,5 @@
 import types
+import csv
 from bika.lims.exportimport.instruments.resultsimport import InstrumentResultsFileParser
 from cStringIO import StringIO
 from xlrd import open_workbook
@@ -81,14 +82,19 @@ class InstrumentXLSResultsFileParser(InstrumentResultsFileParser):
         if encoding == 'xlsx':
             csv_data = xlsx_to_csv(
                 infile, worksheet=worksheet, delimiter=self._delimiter)
+            # adapt csv_data into a FileUpload for parse method
+            self._infile = infile
+            stub = FileStub(file=csv_data, name=str(infile.filename))
+            self._csvfile = FileUpload(stub)
         elif encoding == 'xls':
             csv_data = xls_to_csv(
                 infile, worksheet=worksheet, delimiter=self._delimiter)
-
-        # adpat csv_data into a FileUpload for parse method
-        self._infile = infile
-        stub = FileStub(file=csv_data, name=str(infile.filename))
-        self._csvfile = FileUpload(stub)
+            # adapt csv_data into a FileUpload for parse method
+            self._infile = infile
+            stub = FileStub(file=csv_data, name=str(infile.filename))
+            self._csvfile = FileUpload(stub)
+        elif encoding == 'csv':
+            self._csvfile = infile
 
         self._encoding = encoding
         self._end_header = False
@@ -104,24 +110,30 @@ class InstrumentXLSResultsFileParser(InstrumentResultsFileParser):
         except AttributeError:
             f = infile
 
-        for line in f.readlines():
-            self._numline += 1
-            if jump == -1:
-                # Something went wrong. Finish
-                self.err("File processing finished due to critical errors")
-                return False
-            if jump > 0:
-                # Jump some lines
-                jump -= 1
-                continue
+        if self._encoding in ('xlsx', 'xls'):
+            for line in f.readlines():
+                self._numline += 1
+                if jump == -1:
+                    # Something went wrong. Finish
+                    self.err("File processing finished due to critical errors")
+                    return False
+                if jump > 0:
+                    # Jump some lines
+                    jump -= 1
+                    continue
 
-            if not line or not line.strip():
-                continue
+                if not line or not line.strip():
+                    continue
 
-            line = line.strip()
-            jump = 0
-            if line:
-                jump = self._parseline(line)
+                line = line.strip()
+                jump = 0
+                if line:
+                    jump = self._parseline(line)
+
+        if self._encoding in ('csv'):
+            csv_file = csv.reader(f, delimiter=',')
+            self._parseCSV(csv_file)
+            f.close()
 
         self.log(
             "End of file reached successfully: ${total_objects} objects, "
