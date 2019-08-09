@@ -208,7 +208,7 @@ class ChemStationCSVParser(InstrumentXLSResultsFileParser):
                     ret_time = row[2]     #retention time for analyte
                     result = row[3]       #instrument result for analyte
                     values = {kw:
-                                  {'DefaultResult': 'Final Conc', 'Resp': resp, 'Ret': ret_time, 'Final Conc': result}
+                                  {'DefaultResult': 'Final Conc', 'resp': resp, 'Ret': ret_time, 'Final Conc': result}
                               }
                     self._addRawResult(self._ar_id, values, override=False)
 
